@@ -41,6 +41,7 @@
     "mapbox-gl": "^2.7.0",
     "sirv-cli": "^2.0.0",
     "underscore": "^1.13.2",
-    "vis-timeline": "^7.5.0"
+    "vis-timeline": "^7.5.0",
+    "wavesurfer.js": "^7.7.14"
   }
 }

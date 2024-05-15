@@ -5,6 +5,12 @@
     sync_paused,
     sync_time_origin_UAR,
   } from "../../stores/sync_time_store";
+
+  import { onMount, onDestroy } from "svelte";
+  import WaveSurfer from "wavesurfer.js";
+
+
+
   export let medium;
 
   let src;
@@ -15,6 +21,9 @@
   let paused = true;
   let muted = true;
   let volume = 0.2;
+  let wavesurfer;
+  let waveformContainer;
+
   if ($platform_config_store["Source of media files"].includes("local")) {
     try {
       used_filepath = $local_file_store[medium.UAR].name;
@@ -39,6 +48,12 @@
       $sync_paused = paused;
       $sync_time_origin_UAR = medium.UAR;
     }
+
+    if (paused) {
+      wavesurfer.pause();
+    } else {
+      wavesurfer.play();
+    }
   };
 
   let handleOnSeekInteract = () => {
@@ -56,6 +71,8 @@
       });
       $sync_time = new_time;
       $sync_time_origin_UAR = medium.UAR;
+
+      wavesurfer.seekTo(vidTime / video_duration);
     }
   };
 
@@ -65,6 +82,13 @@
 
   let handleOnMuteButtonClick = () => {
     muted = !muted;
+    if (muted) {
+      console.log(volume);
+      wavesurfer.setVolume(0);
+    } else {
+      console.log(volume);
+      wavesurfer.setVolume(volume);
+    }
   };
 
   sync_time.subscribe((sync_time) => {
@@ -95,6 +119,40 @@
       });
       paused = sync_paused;
     }
+  });
+
+  onMount(() => {
+    if (waveformContainer) {
+      // Initialize WaveSurfer
+      wavesurfer = WaveSurfer.create({
+        container: waveformContainer,
+        waveColor: "violet",
+        progressColor: "purple",
+        backend: 'MediaElement',
+        mediaControls: false,
+        responsive: true
+      });
+
+      wavesurfer.load(src);
+
+      if (muted) {
+        wavesurfer.setVolume(0);
+      }
+
+      wavesurfer.on('audioprocess', () => {
+        video_time = wavesurfer.getCurrentTime();
+      });
+
+      wavesurfer.on('seek', () => {
+        video_time = wavesurfer.getCurrentTime();
+      });
+    }
+
+    return () => {
+      if (wavesurfer) {
+        wavesurfer.destroy();
+      }
+    };
   });
 </script>
 
@@ -146,11 +204,62 @@
       <!-- svelte-ignore a11y-missing-attribute -->
       <img {src} />
     </div>
+  
+  {:else if used_filepath.includes("mp3")}
+
+  <div class="audio_wrapper">
+    <div bind:this="{waveformContainer}" id="waveform"></div>
+    <audio
+      {src}
+      type="audio/*"
+      bind:currentTime={video_time}
+      bind:duration={video_duration}
+      bind:paused
+      bind:muted
+      bind:volume
+      on:timeupdate={handleVideoOnTimeUpdate}
+    />
+    <div class="controls_bar">
+      <button class="box text_level1" on:click={handleOnPlayButton}
+        >{paused ? "Play" : "Pause"}</button
+      >
+      <input
+        type="range"
+        min="0"
+        max="100"
+        bind:value={video_seek_value}
+        class="slider"
+        on:input={handleOnSeekInteract}
+      />
+      <button class="box text_level1" on:click={handleOnMuteButtonClick}
+        >{muted ? "Unmute" : "Mute"}</button
+      >
+      <input
+        type="range"
+        min="0"
+        step="0.001"
+        max="1"
+        bind:value={volume}
+        class="slider"
+      />
+    </div>
+  </div>
+
   {/if}
 {/if}
 
 <style>
   .video_wrapper {
+    width: 100%;
+    max-height: 40vh;
+    margin: 0 auto;
+    overflow: hidden;
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+  }
+
+  .audio_wrapper {
     width: 100%;
     max-height: 40vh;
     margin: 0 auto;
@@ -174,6 +283,11 @@
 
   button {
     height: 10%;
+  }
+
+  #waveform {
+    width: 100%;
+    /* height: 100%; */
   }
 
   .controls_bar {
