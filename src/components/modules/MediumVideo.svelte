@@ -1,5 +1,5 @@
 <script>
-  import { local_file_store, platform_config_store } from "../../stores/store";
+  import { local_file_store, platform_config_store, ui_store } from "../../stores/store";
   import {
     sync_time,
     sync_paused,
@@ -9,7 +9,11 @@
   import { onMount, onDestroy } from "svelte";
   import WaveSurfer from "wavesurfer.js";
 
-
+  function not_allowed_to_open(medium) {
+    $ui_store.media_in_view = $ui_store.media_in_view.filter(
+      (exist_UAR) => exist_UAR !== medium.UAR
+    );
+  }
 
   export let medium;
 
@@ -19,10 +23,11 @@
   let video_duration = 0;
   let video_seek_value = 0;
   let paused = true;
-  let muted = true;
+  let muted = false;
   let volume = 0.2;
   let wavesurfer;
   let waveformContainer;
+
 
   if ($platform_config_store["Source of media files"].includes("local")) {
     try {
@@ -37,8 +42,14 @@
     src = used_filepath;
   }
 
+  if (medium.start.getTime() < new Date()) {
+    not_allowed_to_open(medium);
+  }
+
   let handleOnPlayButton = () => {
+    console.log("play button");
     paused = !paused;
+
     if (paused !== $sync_paused) {
       console.log("--------------");
       console.log("sending pause/play", {
@@ -49,30 +60,50 @@
       $sync_time_origin_UAR = medium.UAR;
     }
 
-    if (paused) {
-      wavesurfer.pause();
-    } else {
-      wavesurfer.play();
+    let new_time = new Date(
+      medium.start.getTime() + Math.floor(video_time * 1000)
+    );
+    if (new_time !== $sync_time) {
+      // console.log("--------------");
+      // console.log("sending seek", {
+      //   origin: medium.UAR,
+      //   sync_time: new_time,
+      // });
+      $sync_time = new_time;
+      $sync_time_origin_UAR = medium.UAR;
+      // $sync_paused = paused;
     }
+
+    // if (paused) {
+    //   wavesurfer.pause();
+    // } else {
+    //   wavesurfer.play();
+    // }
   };
 
   let handleOnSeekInteract = () => {
+    // console.log('handleOnSeekInteract');
     var vidTime = (video_duration * video_seek_value) / 100.0;
     video_time = vidTime;
+
+    // console.log(video_seek_value);
+    // console.log(video_time);
 
     let new_time = new Date(
       medium.start.getTime() + Math.floor(video_time * 1000)
     );
     if (new_time !== $sync_time) {
-      console.log("--------------");
-      console.log("sending seek", {
-        origin: medium.UAR,
-        sync_time: new_time,
-      });
+      // console.log("--------------");
+      // console.log("sending seek", {
+      //   origin: medium.UAR,
+      //   sync_time: new_time,
+      // });
       $sync_time = new_time;
       $sync_time_origin_UAR = medium.UAR;
 
-      wavesurfer.seekTo(vidTime / video_duration);
+      if (wavesurfer) {
+        wavesurfer.seekTo(vidTime / video_duration);
+      }
     }
   };
 
@@ -82,12 +113,12 @@
 
   let handleOnMuteButtonClick = () => {
     muted = !muted;
-    if (muted) {
-      console.log(volume);
-      wavesurfer.setVolume(0);
-    } else {
-      console.log(volume);
-      wavesurfer.setVolume(volume);
+    if (wavesurfer) {
+      if (muted) {
+        wavesurfer.setVolume(0);
+      } else {
+        wavesurfer.setVolume(volume);
+      }
     }
   };
 
@@ -97,11 +128,11 @@
       sync_time.getTime() > medium.start.getTime() &&
       sync_time.getTime() < medium.end.getTime()
     ) {
-      console.log("receiving seek", {
-        origin: $sync_time_origin_UAR,
-        receiver: medium.UAR,
-        sync_time: sync_time,
-      });
+      // console.log("receiving seek", {
+      //   origin: $sync_time_origin_UAR,
+      //   receiver: medium.UAR,
+      //   sync_time: sync_time,
+      // });
       video_time = (sync_time.getTime() - medium.start.getTime()) / 1000;
     }
   });
@@ -124,12 +155,13 @@
   onMount(() => {
     if (waveformContainer) {
       // Initialize WaveSurfer
+      console.log("Start");
       wavesurfer = WaveSurfer.create({
         container: waveformContainer,
         waveColor: "violet",
         progressColor: "purple",
         backend: 'MediaElement',
-        mediaControls: false,
+        mediaControls: true,
         responsive: true
       });
 
@@ -143,9 +175,14 @@
         video_time = wavesurfer.getCurrentTime();
       });
 
-      wavesurfer.on('seek', () => {
+      wavesurfer.on('interaction', () => {
+        // console.log("sync_time", $sync_time);
         video_time = wavesurfer.getCurrentTime();
       });
+      
+      wavesurfer.on('play', handleOnPlayButton);
+      wavesurfer.on('pause', handleOnPlayButton);
+
     }
 
     return () => {
@@ -208,40 +245,11 @@
   {:else if used_filepath.includes("mp3")}
 
   <div class="audio_wrapper">
-    <div bind:this="{waveformContainer}" id="waveform"></div>
-    <audio
-      {src}
-      type="audio/*"
-      bind:currentTime={video_time}
-      bind:duration={video_duration}
-      bind:paused
-      bind:muted
-      bind:volume
-      on:timeupdate={handleVideoOnTimeUpdate}
-    />
-    <div class="controls_bar">
-      <button class="box text_level1" on:click={handleOnPlayButton}
-        >{paused ? "Play" : "Pause"}</button
-      >
-      <input
-        type="range"
-        min="0"
-        max="100"
-        bind:value={video_seek_value}
-        class="slider"
-        on:input={handleOnSeekInteract}
-      />
-      <button class="box text_level1" on:click={handleOnMuteButtonClick}
-        >{muted ? "Unmute" : "Mute"}</button
-      >
-      <input
-        type="range"
-        min="0"
-        step="0.001"
-        max="1"
-        bind:value={volume}
-        class="slider"
-      />
+    <div 
+      bind:this="{waveformContainer}"
+      id="waveform"
+      wavesurfer
+    >
     </div>
   </div>
 
