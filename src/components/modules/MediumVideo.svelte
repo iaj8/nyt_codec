@@ -3,17 +3,11 @@
   import {
     sync_time,
     sync_paused,
-    sync_time_origin_UAR,
+    sync_time_origin_UAR
   } from "../../stores/sync_time_store";
 
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, tick } from "svelte";
   import WaveSurfer from "wavesurfer.js";
-
-  function not_allowed_to_open(medium) {
-    $ui_store.media_in_view = $ui_store.media_in_view.filter(
-      (exist_UAR) => exist_UAR !== medium.UAR
-    );
-  }
 
   export let medium;
 
@@ -28,6 +22,13 @@
   let wavesurfer;
   let waveformContainer;
 
+  if (outside_current_sync(medium)) {
+    console.log("blocking", medium.UAR);
+    block_opening(medium);
+  } else {
+    update_sync_time(medium);
+    console.log("not blocking", medium.UAR);
+  }
 
   if ($platform_config_store["Source of media files"].includes("local")) {
     try {
@@ -40,10 +41,6 @@
     used_filepath =
       medium[$platform_config_store["Title of column used for url"]];
     src = used_filepath;
-  }
-
-  if (medium.start.getTime() < new Date()) {
-    not_allowed_to_open(medium);
   }
 
   let handleOnPlayButton = () => {
@@ -60,19 +57,7 @@
       $sync_time_origin_UAR = medium.UAR;
     }
 
-    let new_time = new Date(
-      medium.start.getTime() + Math.floor(video_time * 1000)
-    );
-    if (new_time !== $sync_time) {
-      // console.log("--------------");
-      // console.log("sending seek", {
-      //   origin: medium.UAR,
-      //   sync_time: new_time,
-      // });
-      $sync_time = new_time;
-      $sync_time_origin_UAR = medium.UAR;
-      // $sync_paused = paused;
-    }
+    update_sync_time(medium);
 
     // if (paused) {
     //   wavesurfer.pause();
@@ -89,26 +74,16 @@
     // console.log(video_seek_value);
     // console.log(video_time);
 
-    let new_time = new Date(
-      medium.start.getTime() + Math.floor(video_time * 1000)
-    );
-    if (new_time !== $sync_time) {
-      // console.log("--------------");
-      // console.log("sending seek", {
-      //   origin: medium.UAR,
-      //   sync_time: new_time,
-      // });
-      $sync_time = new_time;
-      $sync_time_origin_UAR = medium.UAR;
+    update_sync_time(medium);
 
-      if (wavesurfer) {
-        wavesurfer.seekTo(vidTime / video_duration);
-      }
+    if (wavesurfer) {
+      wavesurfer.seekTo(vidTime / video_duration);
     }
   };
 
   let handleVideoOnTimeUpdate = () => {
     video_seek_value = (video_time / video_duration) * 100;
+    update_sync_time(medium);
   };
 
   let handleOnMuteButtonClick = () => {
@@ -122,19 +97,56 @@
     }
   };
 
-  sync_time.subscribe((sync_time) => {
-    if (
-      $sync_time_origin_UAR !== medium.UAR &&
-      sync_time.getTime() > medium.start.getTime() &&
-      sync_time.getTime() < medium.end.getTime()
-    ) {
-      // console.log("receiving seek", {
-      //   origin: $sync_time_origin_UAR,
-      //   receiver: medium.UAR,
-      //   sync_time: sync_time,
+  export function update_sync_time(medium) {
+    let new_time = new Date(
+      medium.start.getTime() + Math.floor(video_time * 1000)
+    );
+    if (new_time !== $sync_time) {
+      // console.log("--------------");
+      // console.log("sending seek", {
+      //   origin: medium.UAR,
+      //   sync_time: new_time,
       // });
-      video_time = (sync_time.getTime() - medium.start.getTime()) / 1000;
+      $sync_time = new_time;
+      $sync_time_origin_UAR = medium.UAR;
+      // $sync_paused = paused;
     }
+  }
+
+  function block_opening(medium) {
+    $ui_store.media_in_view = $ui_store.media_in_view.filter(
+      (exist_UAR) => exist_UAR !== medium.UAR
+    );
+    if (wavesurfer) {
+      wavesurfer.destroy();
+    }
+  }
+
+  export function outside_current_sync(medium) {
+    if ($ui_store.media_in_view.length == 0 || 
+      ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
+      return false;
+    } else {
+      return $sync_time.getTime() < medium.start.getTime() ||
+        $sync_time.getTime() > medium.end.getTime();
+    }
+  }
+
+  sync_time.subscribe((sync_time) => {
+    // if (
+    //   $sync_time_origin_UAR !== medium.UAR &&
+    //   sync_time.getTime() > medium.start.getTime() &&
+    //   sync_time.getTime() < medium.end.getTime()
+    // ) {
+    //   // console.log("receiving seek", {
+    //   //   origin: $sync_time_origin_UAR,
+    //   //   receiver: medium.UAR,
+    //   //   sync_time: sync_time,
+    //   // });
+    //   video_time = (sync_time.getTime() - medium.start.getTime()) / 1000;
+    // }
+
+    // update_custom_time(sync_time);
   });
 
   sync_paused.subscribe((sync_paused) => {
@@ -192,6 +204,13 @@
     };
   });
 </script>
+
+
+<!-- {#if showAlert} -->
+  <!-- <div class="alert-popup"> -->
+    <!-- <p>{alertMessage}</p> -->
+  <!-- </div> -->
+<!-- {/if} -->
 
 {#if src !== null}
   {#if used_filepath.toLowerCase().includes("mp4") || used_filepath
@@ -345,4 +364,19 @@
   input[type="range"]::-ms-fill-upper {
     background-color: var(--seekbar-post-color);
   }
+
+  /* .alert-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 1rem;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    animation: flash 1s ease-in-out;
+    z-index: 9999;
+  } */
 </style>

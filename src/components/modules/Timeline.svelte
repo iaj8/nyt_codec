@@ -5,6 +5,11 @@
     ui_store,
     platform_config_store,
   } from "../../stores/store";
+  import {
+    sync_time,
+    sync_paused,
+    sync_time_origin_UAR
+  } from "../../stores/sync_time_store";
   import { DataSet, DataView, Timeline, moment } from "vis-timeline/standalone";
   // import "vis-timeline/styles/vis-timeline-graph2d.css";
 
@@ -81,6 +86,7 @@
         main_timeline.itemSet.items[UAR].setData(item.data);
       }
     });
+    
   }
 
   // update when media_store_filtered changes
@@ -116,6 +122,13 @@
       update_timeline_clicked_hovered();
     }
   }
+
+  sync_time.subscribe((sync_time) => {
+    if (main_timeline) {
+      main_timeline.removeCustomTime("current_time_line");
+      main_timeline.addCustomTime(sync_time, "current_time_line");  
+    }
+  });
 
   // do stuff at beginning
   onMount(() => {
@@ -213,7 +226,7 @@
     });
   });
 
-  function updateCurrentTimeToMatchTimeline(properties) {
+  export function updateCurrentTimeToMatchTimeline(properties) {
     let current_time = new Date(
       (properties.start.getTime() + properties.end.getTime()) / 2
     );

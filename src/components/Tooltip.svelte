@@ -4,8 +4,26 @@
     ui_store,
     platform_config_store,
   } from "../stores/store";
+
+  import {
+    sync_time,
+    sync_paused,
+    sync_time_origin_UAR
+  } from "../stores/sync_time_store";
+
   export let mouse_xy;
-  let tooltip, hovered_UAR, hovered_media, hovered_corrected_time;
+  let tooltip, hovered_UAR, hovered_media, hovered_corrected_time, mediumVideoComponent;
+
+  // replace this with a properly done import from MediumVideo
+  function outside_current_sync(medium) {
+    if ($ui_store.media_in_view.length == 0 || 
+      ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
+      return false;
+    } else {
+      return $sync_time.getTime() < medium.start.getTime() ||
+        $sync_time.getTime() > medium.end.getTime();
+    }
+  }
 
   $: {
     hovered_UAR = $ui_store.media_hovered[0];
@@ -88,7 +106,13 @@
       <td>longitude</td>
       <td>{hovered_media.long}</td>
     </tr>
+    {#if outside_current_sync(hovered_media)}
+      <div class="overlay">
+        <div class="overlay_text"> Can't open, outside current sync time. </div>
+      </div>
+    {/if}
   </table>
+
 {/if}
 
 <style>
@@ -101,6 +125,19 @@
     background: black;
     width: 250px;
     color: white;
+  }
+
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3;
   }
 
   tr > td:first-child {

@@ -4,12 +4,14 @@
     import ModuleTools from "./ModuleTools.svelte";
     import About from "./About.svelte";
     import Logo from "./Logo.svelte";
+    import SyncModeToggle from "./SyncModeToggle.svelte";
 </script>
 
 <div id="top_bar">
     <FilterButton />
     <div class="vl" />
     <ModuleTools />
+    <SyncModeToggle />
     <Finder />
     <About />
     <div class="vl" />

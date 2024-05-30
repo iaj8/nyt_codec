@@ -1,5 +1,11 @@
 <script>
     import { ui_store } from "../../stores/store";
+    import {
+        sync_time,
+        sync_paused,
+        sync_time_origin_UAR
+    } from "../../stores/sync_time_store";
+    import { onMount, onDestroy } from "svelte";
     import Timeline from "./Timeline.svelte";
     import Map from "./Map.svelte";
     import MediumVideo from "./MediumVideo.svelte";
@@ -12,6 +18,10 @@
         map: Map,
         timeline: Timeline,
     };
+
+    let mediumVideoComponent;
+    let timelineComponent;
+    let mapComponent;
 
     function close_module(module, medium) {
         // if X on a medium and there is more than one in view
@@ -31,6 +41,11 @@
             }
         }
     }
+
+    // onMount(() => {
+    //     console.log(timelineComponent.main_timeline);
+    // });
+
 </script>
 
 <div
@@ -52,8 +67,29 @@
             &#215;
         </div>
     </div>
-    <div class="module_content">
+    <!-- <div class="module_content">
         <svelte:component this={modules_options[module]} {medium} />
+    </div> -->
+    <div class="module_content">
+        {#if module === 'media'}
+            <MediumVideo 
+                this={modules_options[module]}
+                bind:this={mediumVideoComponent}
+                {medium}
+            />
+        {:else if module === 'map'}
+            <Map
+                bind:this={mapComponent}
+                this={modules_options[module]}
+                {medium}
+            />
+        {:else if module === 'timeline'}
+            <Timeline
+                bind:this={timelineComponent}
+                this={modules_options[module]}
+                {medium}
+            />
+        {/if}
     </div>
 </div>
 
