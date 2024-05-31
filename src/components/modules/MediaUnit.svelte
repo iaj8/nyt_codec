@@ -63,53 +63,33 @@
   }
 
   let handleOnPlayButton = () => {
-    console.log("play button");
     // 2: update sync time, when play button on any media file is pressed
+    console.log("handleOnPlayButton");
     update_sync_time(medium, "type_2_play_button_press");
     paused = !paused;
     $sync_paused = paused;
-
-    // if (paused) {
-    //   wavesurfer.pause();
-    // } else {
-    //   wavesurfer.play();
-    // }
   };
 
   let handleOnSeekInteract = () => {
-    console.log("seek interact");
     var vidTime = (video_duration * video_seek_value) / 100.0;
     video_time = vidTime;
 
     // 3: update sync time, when any media file is seeked
-    console.log("3: update sync time, when any media file is seeked")
     update_sync_time(medium, "type_3_seek");
-
-    // if (wavesurfer) {
-    //   wavesurfer.seekTo(vidTime / video_duration);
-    // }
   };
 
-  let handleVideoOnTimeUpdate = () => {
-    console.log("video time update");
+  let handleVideoOnTimeUpdate = (event) => {
     video_seek_value = (video_time / video_duration) * 100;
     // 4: update sync time, when any media file is playing
     update_sync_time(medium, "type_4_video_time_update");
   };
 
   let handleOnMuteButtonClick = () => {
-    console.log("mute button click");
     muted = !muted;
-    if (wavesurfer) {
-      if (muted) {
-        wavesurfer.setVolume(0);
-      } else {
-        wavesurfer.setVolume(volume);
-      }
-    }
   };
 
   export function update_sync_time(medium, origin_type) {
+    console.log("1: update");
     if (!$sync_mode) return;
 
     let new_time = new Date(
@@ -158,6 +138,7 @@
   }
 
   sync_time.subscribe((sync_time) => {
+    console.log("2: subscribe", sync_time);
     if (!$sync_mode) return;
 
     // update video_time to match with sync_time
@@ -201,7 +182,6 @@
   onMount(() => {
     if (waveformContainer) {
       // Initialize WaveSurfer
-      console.log("Start wavesurfer");
       wavesurfer = WaveSurfer.create({
         container: waveformContainer,
         waveColor: "violet",
@@ -219,15 +199,19 @@
 
       wavesurfer.on('audioprocess', () => {
         video_time = wavesurfer.getCurrentTime();
+        handleVideoOnTimeUpdate();
       });
 
       wavesurfer.on('interaction', () => {
         // console.log("sync_time", $sync_time);
         video_time = wavesurfer.getCurrentTime();
+        handleVideoOnTimeUpdate();
       });
       
       wavesurfer.on('play', handleOnPlayButton);
       wavesurfer.on('pause', handleOnPlayButton);
+      wavesurfer.on('seeking', handleOnSeekInteract);
+      // wavesurfer.on('timeupdate', handleVideoOnTimeUpdate);
 
     }
   });
@@ -252,9 +236,10 @@
           bind:muted
           bind:volume
           on:timeupdate={handleVideoOnTimeUpdate}
-          controls
         />
-        <!-- <div class="controls_bar">
+        <!-- <video {src} type="video/mp4" muted controls/> -->
+        <div> 00:00 / 00:45 </div>
+        <div class="controls_bar">
           <button class="box text_level1" on:click={handleOnPlayButton}
             >{paused ? "Play" : "Pause"}</button
           >
@@ -277,7 +262,7 @@
             bind:value={volume}
             class="slider"
           />
-        </div> -->
+        </div>
       </div>
     </div>
   {:else if used_filepath.includes("png") || used_filepath.includes("jpeg") || used_filepath.includes("jpg") || used_filepath.includes("webp")}
