@@ -24,7 +24,7 @@
     <span
         style="color:{$sync_mode ? 'blue' : ''}"
     > 
-        sync mode
+        sync mode: {$sync_mode ? 'on' : 'off'}
     </span>
 </button>
 

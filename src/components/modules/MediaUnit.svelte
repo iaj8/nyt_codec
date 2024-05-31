@@ -62,6 +62,20 @@
     src = used_filepath;
   }
 
+  function format_duration(seconds) {
+    // Calculate the hours, minutes, and seconds
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remaining_seconds = seconds % 60;
+
+    // Format the result as "HH:MM:SS"
+    const formatted_hours = String(hours).padStart(2, '0');
+    const formatted_minutes = String(minutes).padStart(2, '0');
+    const formatted_seconds = String(remaining_seconds.toFixed(1)).padStart(2, '0');
+
+    return `${formatted_hours}:${formatted_minutes}:${formatted_seconds}`;
+  }
+
   let handleOnPlayButton = () => {
     // 2: update sync time, when play button on any media file is pressed
     console.log("handleOnPlayButton");
@@ -238,7 +252,7 @@
           on:timeupdate={handleVideoOnTimeUpdate}
         />
         <!-- <video {src} type="video/mp4" muted controls/> -->
-        <div> 00:00 / 00:45 </div>
+        <div> {format_duration(video_time)} / {format_duration(video_duration)} </div>
         <div class="controls_bar">
           <button class="box text_level1" on:click={handleOnPlayButton}
             >{paused ? "Play" : "Pause"}</button
