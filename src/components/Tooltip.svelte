@@ -18,9 +18,9 @@
   } from "../stores/sync_time_store";
 
   export let mouse_xy;
-  let tooltip, hovered_UAR, hovered_media, hovered_corrected_time, mediumVideoComponent;
+  let tooltip, hovered_UAR, hovered_media, hovered_corrected_time, mediaUnitComponent;
 
-  // replace this with a properly done import from MediumVideo
+  // replace this with a properly done import from MediaUnit
   function outside_current_sync(medium) {
     if (!$sync_mode) return false;
 
@@ -30,7 +30,7 @@
     } else {
       // if any part of the duration of the media falls within current sync range it is inside the current sync,
       // so for it to be outside the current sync, return the negation of this condition
-      if (medium) {
+      if (medium && medium.start && medium.end) {
         return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
       } else {
         return false;

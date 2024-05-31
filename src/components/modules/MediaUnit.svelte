@@ -13,7 +13,8 @@
     sync_time,
     sync_paused,
     sync_time_origin_UAR,
-    sync_mode
+    sync_mode,
+    sync_time_origin_type
   } from "../../stores/sync_time_store";
 
   import { onMount } from "svelte";
@@ -35,9 +36,16 @@
   if (outside_current_sync(medium)) {
     block_opening(medium);
   } else {
-    // 1: update sync time, when loading new media file
-    console.log("1: update sync time, when loading new media file");
-    update_sync_time(medium);
+    // 1: update sync time, when loading new media file, if its the first file loaded
+    if ($ui_store.media_in_view.length == 0 || 
+        ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
+      update_sync_time(medium, "type_1_new_media_file");
+    }
+    if ($sync_time.getTime() >= medium.start.getTime() &&
+      $sync_time.getTime() <= medium.end.getTime()) {
+      medium.in_current_sync_range = true;
+      $ui_store.media_in_sync_range = [...$ui_store.media_in_sync_range, medium.UAR];
+    }
     update_sync_bounds(medium);
   }
 
@@ -56,21 +64,10 @@
 
   let handleOnPlayButton = () => {
     console.log("play button");
-    paused = !paused;
-
-    if (paused !== $sync_paused) {
-      console.log("--------------");
-      console.log("sending pause/play", {
-        origin: medium.UAR,
-        sync_paused: false,
-      });
-      $sync_paused = paused;
-      $sync_time_origin_UAR = medium.UAR;
-    }
-
     // 2: update sync time, when play button on any media file is pressed
-    console.log("2: update sync time, when play button on any media file is pressed");
-    update_sync_time(medium);
+    update_sync_time(medium, "type_2_play_button_press");
+    paused = !paused;
+    $sync_paused = paused;
 
     // if (paused) {
     //   wavesurfer.pause();
@@ -80,13 +77,13 @@
   };
 
   let handleOnSeekInteract = () => {
-    console.log('handleOnSeekInteract');
+    console.log("seek interact");
     var vidTime = (video_duration * video_seek_value) / 100.0;
     video_time = vidTime;
 
     // 3: update sync time, when any media file is seeked
     console.log("3: update sync time, when any media file is seeked")
-    update_sync_time(medium);
+    update_sync_time(medium, "type_3_seek");
 
     // if (wavesurfer) {
     //   wavesurfer.seekTo(vidTime / video_duration);
@@ -94,14 +91,14 @@
   };
 
   let handleVideoOnTimeUpdate = () => {
-    console.log('handleVideoOnTimeUpdate');
+    console.log("video time update");
     video_seek_value = (video_time / video_duration) * 100;
     // 4: update sync time, when any media file is playing
-    console.log("4: update sync time, when any media file is playing");
-    update_sync_time(medium);
+    update_sync_time(medium, "type_4_video_time_update");
   };
 
   let handleOnMuteButtonClick = () => {
+    console.log("mute button click");
     muted = !muted;
     if (wavesurfer) {
       if (muted) {
@@ -112,22 +109,18 @@
     }
   };
 
-  export function update_sync_time(medium) {
+  export function update_sync_time(medium, origin_type) {
     if (!$sync_mode) return;
 
     let new_time = new Date(
       medium.start.getTime() + Math.floor(video_time * 1000)
     );
-    if (new_time !== $sync_time) {
-      // console.log("--------------");
-      // console.log("sending seek", {
-      //   origin: medium.UAR,
-      //   sync_time: new_time,
-      // });
-      $sync_time = new_time;
-      $sync_time_origin_UAR = medium.UAR;
-      // $sync_paused = paused;
-    }
+    $sync_time_origin_UAR = medium.UAR;
+    $sync_time_origin_type = origin_type;
+    $sync_time = new_time;
+
+    medium.in_current_sync_range = true;
+    $ui_store.media_in_sync_range = [...$ui_store.media_in_sync_range, medium.UAR];
   }
 
   export function update_sync_bounds(medium) {
@@ -147,7 +140,7 @@
     }
   }
 
-  function outside_current_sync(medium) {
+  export function outside_current_sync(medium) {
     if (!$sync_mode) return false;
 
     if ($ui_store.media_in_view.length == 0 || 
@@ -166,20 +159,31 @@
 
   sync_time.subscribe((sync_time) => {
     if (!$sync_mode) return;
-    // if (
-    //   $sync_time_origin_UAR !== medium.UAR &&
-    //   sync_time.getTime() > medium.start.getTime() &&
-    //   sync_time.getTime() < medium.end.getTime()
-    // ) {
-    //   // console.log("receiving seek", {
-    //   //   origin: $sync_time_origin_UAR,
-    //   //   receiver: medium.UAR,
-    //   //   sync_time: sync_time,
-    //   // });
-    //   video_time = (sync_time.getTime() - medium.start.getTime()) / 1000;
-    // }
 
-    // update_custom_time(sync_time);
+    // update video_time to match with sync_time
+    if (
+      $sync_time_origin_type != "type_4_video_time_update" &&
+      $sync_time_origin_UAR !== medium.UAR &&
+      sync_time.getTime() > medium.start.getTime() &&
+      sync_time.getTime() < medium.end.getTime()
+    ) {
+      video_time = (sync_time.getTime() - medium.start.getTime()) / 1000;
+    }
+
+    // if this media ends before or starts after the current sync time, pause it and remove it from ui_store.media_in_sync_range 
+    if (!(sync_time.getTime() >= medium.start.getTime() &&
+        sync_time.getTime() <= medium.end.getTime()) &&
+        $sync_time_origin_UAR !== medium.UAR) {
+      medium.in_current_sync_range = false;
+      $ui_store.media_in_sync_range = $ui_store.media_in_sync_range.filter(
+        (exist_UAR) => exist_UAR !== medium.UAR
+      );
+
+      if ($sync_time_origin_UAR !== medium.UAR) {
+        muted = true;
+        paused = true;
+      }
+    }
   });
 
   sync_paused.subscribe((sync_paused) => {
@@ -190,11 +194,6 @@
       $sync_time.getTime() > medium.start.getTime() &&
       $sync_time.getTime() < medium.end.getTime()
     ) {
-      console.log("receiving pause", {
-        origin: $sync_time_origin_UAR,
-        receiver: medium.UAR,
-        sync_paused: sync_paused,
-      });
       paused = sync_paused;
     }
   });
@@ -238,7 +237,10 @@
   {#if used_filepath.toLowerCase().includes("mp4") || used_filepath
       .toLowerCase()
       .includes("mov") || used_filepath.toLowerCase().includes("webm")}
-    <div class="medium_video" id={medium.id}>
+    <div
+      class="medium_video"
+      id={medium.id}
+    >
       <div class="video_wrapper">
         <!-- svelte-ignore a11y-media-has-caption -->
         <video
@@ -250,8 +252,9 @@
           bind:muted
           bind:volume
           on:timeupdate={handleVideoOnTimeUpdate}
+          controls
         />
-        <div class="controls_bar">
+        <!-- <div class="controls_bar">
           <button class="box text_level1" on:click={handleOnPlayButton}
             >{paused ? "Play" : "Pause"}</button
           >
@@ -274,7 +277,7 @@
             bind:value={volume}
             class="slider"
           />
-        </div>
+        </div> -->
       </div>
     </div>
   {:else if used_filepath.includes("png") || used_filepath.includes("jpeg") || used_filepath.includes("jpg") || used_filepath.includes("webp")}

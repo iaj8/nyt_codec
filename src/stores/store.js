@@ -9,6 +9,7 @@ export const ui_store = writable({
     modules_in_view: ["timeline", "map", "media"],
     media_in_view: [],
     media_hovered: [],
+    media_in_sync_range: [],
     filter_in_view: false
 });
 

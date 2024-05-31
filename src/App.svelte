@@ -97,6 +97,8 @@
       event.id = id;
       event.description = event.event;
 
+      event.in_current_sync_range = false;
+
       // add video object to data array
       events.push(event);
     });
@@ -155,6 +157,8 @@
         video.type = "range";
         video.label = video.UAR;
         video.id = video.UAR;
+        video.in_current_sync_range = false;
+
         video.url =
           video[$platform_config_store["Title of column used for url"]];
 

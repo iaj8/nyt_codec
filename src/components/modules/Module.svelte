@@ -17,20 +17,22 @@
     import { onMount, onDestroy } from "svelte";
     import Timeline from "./Timeline.svelte";
     import Map from "./Map.svelte";
-    import MediumVideo from "./MediumVideo.svelte";
+    import MediaUnit from "./MediaUnit.svelte";
 
     export let module;
     export let medium;
 
     let modules_options = {
-        media: MediumVideo,
+        media: MediaUnit,
         map: Map,
         timeline: Timeline,
     };
 
-    let mediumVideoComponent;
+    let mediaUnitComponent;
     let timelineComponent;
     let mapComponent;
+
+    $: border_color = $ui_store.media_in_sync_range.includes(medium?.id);
 
     function close_module(module, medium) {
         // if X on a medium and there is more than one in view
@@ -75,7 +77,10 @@
     class="box module {module}_module"
     style="display:{$ui_store.modules_in_view.includes(module)
         ? 'flex'
-        : 'none'}"
+        : 'none'};
+        border-color:{border_color
+        ? 'blue'
+        : ''};"
 >
     <div class="module_topbar">
         <div class="module_title text_level1">
@@ -95,9 +100,9 @@
     </div> -->
     <div class="module_content">
         {#if module === 'media'}
-            <MediumVideo 
+            <MediaUnit 
                 this={modules_options[module]}
-                bind:this={mediumVideoComponent}
+                bind:this={mediaUnitComponent}
                 {medium}
             />
         {:else if module === 'map'}

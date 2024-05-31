@@ -136,6 +136,8 @@
   }
 
   sync_time.subscribe((sync_time) => {
+    if (!$sync_mode) return;
+
     if (main_timeline) {
       let copy_custom_times = main_timeline?.customTimes.slice(0);
       copy_custom_times?.forEach((custom_time) => {
@@ -147,6 +149,8 @@
   });
 
   sync_range_start.subscribe((sync_range_start) => {
+    if (!$sync_mode) return;
+
     if (main_timeline) {
       let copy_custom_times = main_timeline?.customTimes.slice(0);
       copy_custom_times?.forEach((custom_time) => {
@@ -158,6 +162,8 @@
   });
 
   sync_range_end.subscribe((sync_range_end) => {
+    if (!$sync_mode) return;
+
     if (main_timeline) {
       let copy_custom_times = main_timeline?.customTimes.slice(0);
       copy_custom_times?.forEach((custom_time) => {
@@ -177,6 +183,7 @@
           if (id.includes("current_time_line")) main_timeline.removeCustomTime(id);
           if (id.includes("sync_range_start")) main_timeline.removeCustomTime(id);
           if (id.includes("sync_range_end")) main_timeline.removeCustomTime(id);
+          console.log(id);
         });
       }
     }   
@@ -432,7 +439,7 @@
       }
 
       .vis-custom-time.current_time_line {
-        background-color: #d90c1e;
+        background-color: blue;
         width: 5px;
         opacity: 0.5;
       }
