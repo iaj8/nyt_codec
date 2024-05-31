@@ -6,9 +6,15 @@
   } from "../stores/store";
 
   import {
+    init_sync_range_start,
+    init_sync_range_end,
+    init_sync_time,
+    sync_range_start,
+    sync_range_end,
     sync_time,
     sync_paused,
-    sync_time_origin_UAR
+    sync_time_origin_UAR,
+    sync_mode
   } from "../stores/sync_time_store";
 
   export let mouse_xy;
@@ -20,8 +26,9 @@
       ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
       return false;
     } else {
-      return $sync_time.getTime() < medium.start.getTime() ||
-        $sync_time.getTime() > medium.end.getTime();
+      // if any part of the duration of the media falls within current sync range it is inside the current sync,
+      // so for it to be outside the current sync, return the negation of this condition
+      return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
     }
   }
 

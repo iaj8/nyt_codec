@@ -6,9 +6,15 @@
     platform_config_store,
   } from "../../stores/store";
   import {
+    init_sync_range_start,
+    init_sync_range_end,
+    init_sync_time,
+    sync_range_start,
+    sync_range_end,
     sync_time,
     sync_paused,
-    sync_time_origin_UAR
+    sync_time_origin_UAR,
+    sync_mode
   } from "../../stores/sync_time_store";
   import { DataSet, DataView, Timeline, moment } from "vis-timeline/standalone";
   // import "vis-timeline/styles/vis-timeline-graph2d.css";
@@ -105,7 +111,13 @@
     let copy_custom_times = main_timeline?.customTimes.slice(0);
     copy_custom_times?.forEach((custom_time) => {
       let id = custom_time.options.id;
-      if (!id.includes("current_time_line")) main_timeline.removeCustomTime(id);
+      if (!id.includes("current_time_line") 
+          && !id.includes("sync_range_start")
+          && !id.includes("sync_range_end")
+        ) {
+          main_timeline.removeCustomTime(id);
+        }
+        
     });
     $events_store.forEach((el) => {
       main_timeline?.addCustomTime(el.start, el.id);
@@ -125,8 +137,34 @@
 
   sync_time.subscribe((sync_time) => {
     if (main_timeline) {
-      main_timeline.removeCustomTime("current_time_line");
+      let copy_custom_times = main_timeline?.customTimes.slice(0);
+      copy_custom_times?.forEach((custom_time) => {
+        let id = custom_time.options.id;
+        if (id.includes("current_time_line")) main_timeline.removeCustomTime(id);
+      });
       main_timeline.addCustomTime(sync_time, "current_time_line");  
+    }
+  });
+
+  sync_range_start.subscribe((sync_range_start) => {
+    if (main_timeline) {
+      let copy_custom_times = main_timeline?.customTimes.slice(0);
+      copy_custom_times?.forEach((custom_time) => {
+        let id = custom_time.options.id;
+        if (id.includes("sync_range_start")) main_timeline.removeCustomTime(id);
+      });
+      main_timeline.addCustomTime(sync_range_start, "sync_range_start");  
+    }
+  });
+
+  sync_range_end.subscribe((sync_range_end) => {
+    if (main_timeline) {
+      let copy_custom_times = main_timeline?.customTimes.slice(0);
+      copy_custom_times?.forEach((custom_time) => {
+        let id = custom_time.options.id;
+        if (id.includes("sync_range_end")) main_timeline.removeCustomTime(id);
+      });
+      main_timeline.addCustomTime(sync_range_end, "sync_range_end");  
     }
   });
 
@@ -177,10 +215,22 @@
           $ui_store.media_in_view = $ui_store.media_in_view.filter(
             (exist_UAR) => exist_UAR !== UAR
           );
+          //update the sync range as well
+          $sync_range_start = $init_sync_range_start;
+          $sync_range_end = $init_sync_range_end;
+          $ui_store.media_in_view.forEach(element => {
+            $sync_range_start = Math.min($media_store_filtered[element].start.getTime(), $sync_range_start);
+            $sync_range_end = Math.max($media_store_filtered[element].end.getTime(), $sync_range_end);
+          });
         } else {
           $ui_store.media_in_view = [...$ui_store.media_in_view, UAR];
         }
       }
+      if ($ui_store.media_in_view.length == 0) {
+            $sync_range_start = $init_sync_range_start;
+            $sync_range_end = $init_sync_range_end;
+            $sync_time = $init_sync_time;
+        }
     });
 
     // add event listener on click
@@ -198,15 +248,21 @@
     });
 
     // add event listener for when timeline is dragged or zoomed
-    main_timeline.on("rangechange", function (properties) {
-      updateCurrentTimeToMatchTimeline(properties);
-    });
+    // main_timeline.on("rangechange", function (properties) {
+    //   updateCurrentTimeToMatchTimeline(properties);
+    // });
 
     // add current time line
-    main_timeline.addCustomTime(
-      timeBegin.getTime() / 2 + timeEnd.getTime() / 2,
-      "current_time_line"
-    );
+    // main_timeline.addCustomTime(
+    //   timeBegin.getTime() / 2 + timeEnd.getTime() / 2,
+    //   "current_time_line"
+    // );
+
+    $init_sync_range_start = timeEnd.getTime();
+    $init_sync_range_end = timeBegin.getTime();
+
+    $sync_range_start = timeEnd.getTime();
+    $sync_range_end = timeBegin.getTime();
 
     main_timeline.on("mouseOver", (properties) => {
       if (properties.customTime !== null) {
@@ -215,13 +271,13 @@
       } else {
         document.getElementById("hover_box").style.display = "none";
         // optional custom time marker changes
-        try {
-          document.getElementsByClassName(
-            "current_time_line"
-          )[0].style.display = "block";
-        } catch (error) {
-          console.log(error);
-        }
+        // try {
+        //   document.getElementsByClassName(
+        //     "current_time_line"
+        //   )[0].style.display = "block";
+        // } catch (error) {
+        //   console.log(error);
+        // }
       }
     });
   });
@@ -235,7 +291,11 @@
     //   current_time.getHours() -
     //     utcstring2int($platform_config_store["Local GMT offset ([+-]HH:MM)"])
     // );
-    main_timeline.removeCustomTime("current_time_line");
+    let copy_custom_times = main_timeline?.customTimes.slice(0);
+    copy_custom_times?.forEach((custom_time) => {
+      let id = custom_time.options.id;
+      if (id.includes("current_time_line")) main_timeline.removeCustomTime(id);
+    });
     main_timeline.addCustomTime(current_time, "current_time_line");
 
     let current_time_line =
@@ -270,7 +330,10 @@
     let element = document.getElementById("hover_box");
     let id = properties.customTime.split(" ")[0];
     let text = document.getElementById("eventDescription");
-    if (properties.customTime !== "current_time_line") {
+    if (properties.customTime !== "current_time_line"
+        && properties.customTime !== "sync_range_start"
+        && properties.customTime !== "sync_range_end"
+    ) {
       element.style.display = "block";
       text.innerHTML = $events_store[id].description;
     }
@@ -356,6 +419,18 @@
 
       .vis-custom-time.current_time_line {
         background-color: #d90c1e;
+        width: 5px;
+        opacity: 0.5;
+      }
+
+      .vis-custom-time.sync_range_start {
+        background-color: #ffa500;
+        width: 5px;
+        opacity: 0.5;
+      }
+
+      .vis-custom-time.sync_range_end {
+        background-color: #ffa500;
         width: 5px;
         opacity: 0.5;
       }

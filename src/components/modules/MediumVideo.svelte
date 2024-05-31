@@ -1,12 +1,22 @@
 <script>
-  import { local_file_store, platform_config_store, ui_store } from "../../stores/store";
+  import { 
+    local_file_store,
+    platform_config_store,
+    ui_store
+  } from "../../stores/store";
   import {
+    init_sync_range_start,
+    init_sync_range_end,
+    init_sync_time,
+    sync_range_start,
+    sync_range_end,
     sync_time,
     sync_paused,
-    sync_time_origin_UAR
+    sync_time_origin_UAR,
+    sync_mode
   } from "../../stores/sync_time_store";
 
-  import { onMount, onDestroy, tick } from "svelte";
+  import { onMount } from "svelte";
   import WaveSurfer from "wavesurfer.js";
 
   export let medium;
@@ -23,11 +33,11 @@
   let waveformContainer;
 
   if (outside_current_sync(medium)) {
-    console.log("blocking", medium.UAR);
     block_opening(medium);
   } else {
+    // 1: update sync time, when loading new media file
     update_sync_time(medium);
-    console.log("not blocking", medium.UAR);
+    update_sync_bounds(medium);
   }
 
   if ($platform_config_store["Source of media files"].includes("local")) {
@@ -57,6 +67,7 @@
       $sync_time_origin_UAR = medium.UAR;
     }
 
+    // 2: update sync time, when play button on any media file is pressed
     update_sync_time(medium);
 
     // if (paused) {
@@ -67,22 +78,22 @@
   };
 
   let handleOnSeekInteract = () => {
-    // console.log('handleOnSeekInteract');
+    console.log('handleOnSeekInteract');
     var vidTime = (video_duration * video_seek_value) / 100.0;
     video_time = vidTime;
 
-    // console.log(video_seek_value);
-    // console.log(video_time);
-
+    // 3: update sync time, when any media file is seeked
     update_sync_time(medium);
 
-    if (wavesurfer) {
-      wavesurfer.seekTo(vidTime / video_duration);
-    }
+    // if (wavesurfer) {
+    //   wavesurfer.seekTo(vidTime / video_duration);
+    // }
   };
 
   let handleVideoOnTimeUpdate = () => {
+    console.log('handleVideoOnTimeUpdate');
     video_seek_value = (video_time / video_duration) * 100;
+    // 4: update sync time, when any media file is playing
     update_sync_time(medium);
   };
 
@@ -113,6 +124,11 @@
     }
   }
 
+  export function update_sync_bounds(medium) {
+    $sync_range_start = Math.min(medium.start.getTime(), $sync_range_start);
+    $sync_range_end = Math.max(medium.end.getTime(), $sync_range_end);
+  }
+
   function block_opening(medium) {
     $ui_store.media_in_view = $ui_store.media_in_view.filter(
       (exist_UAR) => exist_UAR !== medium.UAR
@@ -127,8 +143,9 @@
       ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
       return false;
     } else {
-      return $sync_time.getTime() < medium.start.getTime() ||
-        $sync_time.getTime() > medium.end.getTime();
+      // if any part of the duration of the media falls within current sync range it is inside the current sync,
+      // so for it to be outside the current sync, return the negation of this condition
+      return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
     }
   }
 
@@ -167,7 +184,7 @@
   onMount(() => {
     if (waveformContainer) {
       // Initialize WaveSurfer
-      console.log("Start");
+      console.log("Start wavesurfer");
       wavesurfer = WaveSurfer.create({
         container: waveformContainer,
         waveColor: "violet",
@@ -196,21 +213,8 @@
       wavesurfer.on('pause', handleOnPlayButton);
 
     }
-
-    return () => {
-      if (wavesurfer) {
-        wavesurfer.destroy();
-      }
-    };
   });
 </script>
-
-
-<!-- {#if showAlert} -->
-  <!-- <div class="alert-popup"> -->
-    <!-- <p>{alertMessage}</p> -->
-  <!-- </div> -->
-<!-- {/if} -->
 
 {#if src !== null}
   {#if used_filepath.toLowerCase().includes("mp4") || used_filepath

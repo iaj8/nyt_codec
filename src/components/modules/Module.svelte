@@ -1,9 +1,18 @@
 <script>
-    import { ui_store } from "../../stores/store";
+    import { 
+        ui_store, 
+        media_store_filtered
+     } from "../../stores/store";
     import {
+        init_sync_range_start,
+        init_sync_range_end,
+        init_sync_time,
+        sync_range_start,
+        sync_range_end,
         sync_time,
         sync_paused,
-        sync_time_origin_UAR
+        sync_time_origin_UAR,
+        sync_mode
     } from "../../stores/sync_time_store";
     import { onMount, onDestroy } from "svelte";
     import Timeline from "./Timeline.svelte";
@@ -39,6 +48,20 @@
                     (exist_UAR) => exist_UAR !== medium.UAR
                 );
             }
+        }
+
+        //update the sync range as well
+        $sync_range_start = $init_sync_range_start;
+        $sync_range_end = $init_sync_range_end;
+        $ui_store.media_in_view.forEach(element => {
+            $sync_range_start = Math.min($media_store_filtered[element].start.getTime(), $sync_range_start);
+            $sync_range_end = Math.max($media_store_filtered[element].end.getTime(), $sync_range_end);
+        });
+
+        if ($ui_store.media_in_view.length == 0) {
+            $sync_range_start = $init_sync_range_start;
+            $sync_range_end = $init_sync_range_end;
+            $sync_time = $init_sync_time;
         }
     }
 
