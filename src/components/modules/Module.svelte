@@ -40,9 +40,9 @@
                 (exist_UAR) => exist_UAR !== medium.UAR
             );
         } else {
-            $ui_store.modules_in_view = $ui_store.modules_in_view.filter(
-                (module_in_view) => module_in_view !== module
-            );
+            // $ui_store.modules_in_view = $ui_store.modules_in_view.filter(
+            //     (module_in_view) => module_in_view !== module
+            // );
             if (module.includes("medi")) {
                 $ui_store.media_in_view = $ui_store.media_in_view.filter(
                     (exist_UAR) => exist_UAR !== medium.UAR

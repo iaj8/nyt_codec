@@ -1,5 +1,14 @@
 <script>
-  import { sync_mode } from "../../stores/sync_time_store";
+    import {
+    ui_store
+  } from "../../stores/store";
+  import {
+    init_sync_range_start,
+    init_sync_range_end,
+    sync_range_start,
+    sync_range_end,
+    sync_mode
+  } from "../../stores/sync_time_store";
 </script>
 
 <button
@@ -8,7 +17,9 @@
     style="color:{$sync_mode ? 'white' : ''}"
     on:click={() => {
         $sync_mode = !$sync_mode;
-        console.log($sync_mode);
+        $sync_range_start = $init_sync_range_start;
+        $sync_range_end = $init_sync_range_end;
+        $ui_store.media_in_view = [];
     }}>
     <span> 
         sync mode

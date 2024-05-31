@@ -168,6 +168,20 @@
     }
   });
 
+  sync_mode.subscribe((sync_mode) => {
+    if (!sync_mode) {
+      if (main_timeline) {
+        let copy_custom_times = main_timeline?.customTimes.slice(0);
+        copy_custom_times?.forEach((custom_time) => {
+          let id = custom_time.options.id;
+          if (id.includes("current_time_line")) main_timeline.removeCustomTime(id);
+          if (id.includes("sync_range_start")) main_timeline.removeCustomTime(id);
+          if (id.includes("sync_range_end")) main_timeline.removeCustomTime(id);
+        });
+      }
+    }   
+  });
+
   // do stuff at beginning
   onMount(() => {
     // creates main timeline vis timeline object

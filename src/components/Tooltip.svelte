@@ -22,13 +22,19 @@
 
   // replace this with a properly done import from MediumVideo
   function outside_current_sync(medium) {
+    if (!$sync_mode) return false;
+
     if ($ui_store.media_in_view.length == 0 || 
       ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
       return false;
     } else {
       // if any part of the duration of the media falls within current sync range it is inside the current sync,
       // so for it to be outside the current sync, return the negation of this condition
-      return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
+      if (medium) {
+        return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
+      } else {
+        return false;
+      }   
     }
   }
 
@@ -115,7 +121,7 @@
     </tr>
     {#if outside_current_sync(hovered_media)}
       <div class="overlay">
-        <div class="overlay_text"> Can't open, outside current sync time. </div>
+        <div class="overlay_text"> Can't open, outside current bounds. </div>
       </div>
     {/if}
   </table>

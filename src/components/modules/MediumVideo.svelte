@@ -36,6 +36,7 @@
     block_opening(medium);
   } else {
     // 1: update sync time, when loading new media file
+    console.log("1: update sync time, when loading new media file");
     update_sync_time(medium);
     update_sync_bounds(medium);
   }
@@ -68,6 +69,7 @@
     }
 
     // 2: update sync time, when play button on any media file is pressed
+    console.log("2: update sync time, when play button on any media file is pressed");
     update_sync_time(medium);
 
     // if (paused) {
@@ -83,6 +85,7 @@
     video_time = vidTime;
 
     // 3: update sync time, when any media file is seeked
+    console.log("3: update sync time, when any media file is seeked")
     update_sync_time(medium);
 
     // if (wavesurfer) {
@@ -94,6 +97,7 @@
     console.log('handleVideoOnTimeUpdate');
     video_seek_value = (video_time / video_duration) * 100;
     // 4: update sync time, when any media file is playing
+    console.log("4: update sync time, when any media file is playing");
     update_sync_time(medium);
   };
 
@@ -109,6 +113,8 @@
   };
 
   export function update_sync_time(medium) {
+    if (!$sync_mode) return;
+
     let new_time = new Date(
       medium.start.getTime() + Math.floor(video_time * 1000)
     );
@@ -125,6 +131,9 @@
   }
 
   export function update_sync_bounds(medium) {
+
+    if (!$sync_mode) return;
+
     $sync_range_start = Math.min(medium.start.getTime(), $sync_range_start);
     $sync_range_end = Math.max(medium.end.getTime(), $sync_range_end);
   }
@@ -138,18 +147,25 @@
     }
   }
 
-  export function outside_current_sync(medium) {
+  function outside_current_sync(medium) {
+    if (!$sync_mode) return false;
+
     if ($ui_store.media_in_view.length == 0 || 
       ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
       return false;
     } else {
       // if any part of the duration of the media falls within current sync range it is inside the current sync,
       // so for it to be outside the current sync, return the negation of this condition
-      return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
+      if (medium) {
+        return !(medium.start.getTime() < $sync_range_end && $sync_range_start < medium.end.getTime())
+      } else {
+        return false;
+      }   
     }
   }
 
   sync_time.subscribe((sync_time) => {
+    if (!$sync_mode) return;
     // if (
     //   $sync_time_origin_UAR !== medium.UAR &&
     //   sync_time.getTime() > medium.start.getTime() &&
@@ -167,6 +183,8 @@
   });
 
   sync_paused.subscribe((sync_paused) => {
+    if (!$sync_mode) return;
+
     if (
       $sync_time_origin_UAR !== medium.UAR &&
       $sync_time.getTime() > medium.start.getTime() &&
