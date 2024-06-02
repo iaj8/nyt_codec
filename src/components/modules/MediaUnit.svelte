@@ -24,7 +24,7 @@
 
   let src;
   let used_filepath;
-  let video_time = 0;
+  let video_time = 0; //Math.max(0, ($sync_time.getTime() - medium.start.getTime()) / 1000);
   let video_duration = 0;
   let video_seek_value = 0;
   let paused = true;
@@ -42,10 +42,10 @@
         ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
       update_sync_time(medium, "type_1_new_media_file");
     } else {
-      // TODO: Figure this out. For some reason, if you don't call update_sync_time here, then when you
-      // play the new media file, it always defaults to starting from the beginning rather than from
-      // the current sync time.
-      update_sync_time(medium, "type_1_new_media_file");
+      video_seek_value = (video_time / video_duration) * 100;
+      if (wavesurfer) {
+        wavesurfer.seekTo(video_time / video_duration);
+      }
     }
     if ($sync_time.getTime() >= medium.start.getTime() &&
       $sync_time.getTime() <= medium.end.getTime()) {
@@ -100,8 +100,7 @@
     update_sync_time(medium, "type_3_seek");
   };
 
-  let handleVideoOnTimeUpdate = () => {
-
+  let handleVideoOnTimeUpdate = (event) => {
     if (video_time == video_duration) {
       //TODO: do something here
     }
@@ -212,6 +211,10 @@
   });
 
   onMount(() => {
+    if (video) {
+      video.currentTime = video_time;
+    }
+
     if (waveformContainer) {
       wavesurfer = WaveSurfer.create({
         container: waveformContainer,
@@ -228,7 +231,6 @@
         if (wavesurfer) {
           wavesurfer.seekTo(video_time / video_duration);
         }
-        // video_duration = wavesurfer.getDuration();
       });
 
       wavesurfer.on('interaction', () => {
@@ -240,11 +242,6 @@
 
       //the wavesurfer is there for visual representation of the audio, it is not actually playing the clip.
       //therefore its volume is muted and we never call wavesurfer.play() etc.
-
-      if (video) {
-        video.currentTime = video_time;
-      }
-
     }
   });
 </script>
@@ -281,7 +278,7 @@
             min="0"
             max="100"
             bind:value={video_seek_value}
-            class="slider"
+            class="slider long-slider"
             on:input={handleOnSeekInteract}
           />
           <button class="box text_level1" on:click={handleOnMuteButtonClick}
@@ -293,7 +290,7 @@
             step="0.001"
             max="1"
             bind:value={volume}
-            class="slider"
+            class="short-slider"
           />
         </div>
       </div>
@@ -396,6 +393,7 @@
   }
 
   .controls_bar {
+    /* width: 100%; */
     display: flex;
     flex-flow: row nowrap;
   }
@@ -443,18 +441,8 @@
     background-color: var(--seekbar-post-color);
   }
 
-  /* .alert-popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    padding: 1rem;
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-    border-radius: 0.25rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
-    animation: flash 1s ease-in-out;
-    z-index: 9999;
+  /* input.long-slider {
+    width: 100%;
+    display: flex;
   } */
 </style>

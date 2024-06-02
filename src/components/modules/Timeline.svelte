@@ -431,7 +431,7 @@
       }
 
       .vis-custom-time {
-        background-color: white;
+        background-color: cyan;
         width: 3px;
         cursor: default;
         opacity: 0.2;
