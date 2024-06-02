@@ -5,6 +5,7 @@
     import About from "./About.svelte";
     import Logo from "./Logo.svelte";
     import SyncModeToggle from "./SyncModeToggle.svelte";
+    import DownloadKMLButton from "./DownloadKMLButton.svelte";
 </script>
 
 <div id="top_bar">
@@ -12,6 +13,7 @@
     <div class="vl" />
     <ModuleTools />
     <SyncModeToggle />
+    <DownloadKMLButton />
     <Finder />
     <About />
     <div class="vl" />
