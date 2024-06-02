@@ -32,7 +32,7 @@
     let timelineComponent;
     let mapComponent;
 
-    $: border_color = $ui_store.media_in_sync_range.includes(medium?.id);
+    $: border_color_blue = $ui_store.media_in_sync_range.includes(medium?.id);
 
     function close_module(module, medium) {
         // if X on a medium and there is more than one in view
@@ -67,10 +67,6 @@
         }
     }
 
-    // onMount(() => {
-    //     console.log(timelineComponent.main_timeline);
-    // });
-
 </script>
 
 <div
@@ -78,7 +74,7 @@
     style="display:{$ui_store.modules_in_view.includes(module)
         ? 'flex'
         : 'none'};
-        border-color:{border_color
+        border-color:{border_color_blue
         ? 'blue'
         : ''};"
 >

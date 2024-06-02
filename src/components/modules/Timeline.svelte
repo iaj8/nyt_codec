@@ -183,7 +183,6 @@
           if (id.includes("current_time_line")) main_timeline.removeCustomTime(id);
           if (id.includes("sync_range_start")) main_timeline.removeCustomTime(id);
           if (id.includes("sync_range_end")) main_timeline.removeCustomTime(id);
-          console.log(id);
         });
       }
     }   

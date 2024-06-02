@@ -32,6 +32,7 @@
   let volume = 0.2;
   let wavesurfer;
   let waveformContainer;
+  let video;
 
   if (outside_current_sync(medium)) {
     block_opening(medium);
@@ -39,6 +40,11 @@
     // 1: update sync time, when loading new media file, if its the first file loaded
     if ($ui_store.media_in_view.length == 0 || 
         ($ui_store.media_in_view.length == 1 && $ui_store.media_in_view.includes(medium.UAR))) {
+      update_sync_time(medium, "type_1_new_media_file");
+    } else {
+      // TODO: Figure this out. For some reason, if you don't call update_sync_time here, then when you
+      // play the new media file, it always defaults to starting from the beginning rather than from
+      // the current sync time.
       update_sync_time(medium, "type_1_new_media_file");
     }
     if ($sync_time.getTime() >= medium.start.getTime() &&
@@ -71,29 +77,39 @@
     // Format the result as "HH:MM:SS"
     const formatted_hours = String(hours).padStart(2, '0');
     const formatted_minutes = String(minutes).padStart(2, '0');
-    const formatted_seconds = String(remaining_seconds.toFixed(1)).padStart(2, '0');
+    const formatted_seconds = String(remaining_seconds.toFixed(1)).padStart(4, '0');
 
     return `${formatted_hours}:${formatted_minutes}:${formatted_seconds}`;
   }
 
   let handleOnPlayButton = () => {
     // 2: update sync time, when play button on any media file is pressed
-    console.log("handleOnPlayButton");
     update_sync_time(medium, "type_2_play_button_press");
+
     paused = !paused;
     $sync_paused = paused;
   };
 
   let handleOnSeekInteract = () => {
-    var vidTime = (video_duration * video_seek_value) / 100.0;
-    video_time = vidTime;
+    video_time = (video_duration * video_seek_value) / 100.0;
 
+    if (wavesurfer) {
+      wavesurfer.seekTo(video_time / video_duration);
+    }
     // 3: update sync time, when any media file is seeked
     update_sync_time(medium, "type_3_seek");
   };
 
-  let handleVideoOnTimeUpdate = (event) => {
+  let handleVideoOnTimeUpdate = () => {
+
+    if (video_time == video_duration) {
+      //TODO: do something here
+    }
+
     video_seek_value = (video_time / video_duration) * 100;
+    if (wavesurfer) {
+      wavesurfer.seekTo(video_time / video_duration);
+    }
     // 4: update sync time, when any media file is playing
     update_sync_time(medium, "type_4_video_time_update");
   };
@@ -103,7 +119,6 @@
   };
 
   export function update_sync_time(medium, origin_type) {
-    console.log("1: update");
     if (!$sync_mode) return;
 
     let new_time = new Date(
@@ -152,7 +167,6 @@
   }
 
   sync_time.subscribe((sync_time) => {
-    console.log("2: subscribe", sync_time);
     if (!$sync_mode) return;
 
     // update video_time to match with sync_time
@@ -163,6 +177,10 @@
       sync_time.getTime() < medium.end.getTime()
     ) {
       video_time = (sync_time.getTime() - medium.start.getTime()) / 1000;
+      video_seek_value = (video_time / video_duration) * 100;
+      if (wavesurfer) {
+        wavesurfer.seekTo(video_time / video_duration);
+      }
     }
 
     // if this media ends before or starts after the current sync time, pause it and remove it from ui_store.media_in_sync_range 
@@ -186,8 +204,8 @@
 
     if (
       $sync_time_origin_UAR !== medium.UAR &&
-      $sync_time.getTime() > medium.start.getTime() &&
-      $sync_time.getTime() < medium.end.getTime()
+      $sync_time.getTime() >= medium.start.getTime() &&
+      $sync_time.getTime() <= medium.end.getTime()
     ) {
       paused = sync_paused;
     }
@@ -195,37 +213,37 @@
 
   onMount(() => {
     if (waveformContainer) {
-      // Initialize WaveSurfer
       wavesurfer = WaveSurfer.create({
         container: waveformContainer,
         waveColor: "violet",
         progressColor: "purple",
         backend: 'MediaElement',
-        mediaControls: true,
+        mediaControls: false,
         responsive: true
       });
 
       wavesurfer.load(src);
 
-      if (muted) {
-        wavesurfer.setVolume(0);
-      }
-
-      wavesurfer.on('audioprocess', () => {
-        video_time = wavesurfer.getCurrentTime();
-        handleVideoOnTimeUpdate();
+      wavesurfer.on('ready', () => {
+        if (wavesurfer) {
+          wavesurfer.seekTo(video_time / video_duration);
+        }
+        // video_duration = wavesurfer.getDuration();
       });
 
       wavesurfer.on('interaction', () => {
-        // console.log("sync_time", $sync_time);
         video_time = wavesurfer.getCurrentTime();
-        handleVideoOnTimeUpdate();
+        video_seek_value = (video_time / video_duration) * 100;
       });
       
-      wavesurfer.on('play', handleOnPlayButton);
-      wavesurfer.on('pause', handleOnPlayButton);
-      wavesurfer.on('seeking', handleOnSeekInteract);
-      // wavesurfer.on('timeupdate', handleVideoOnTimeUpdate);
+      wavesurfer.setMuted(true);
+
+      //the wavesurfer is there for visual representation of the audio, it is not actually playing the clip.
+      //therefore its volume is muted and we never call wavesurfer.play() etc.
+
+      if (video) {
+        video.currentTime = video_time;
+      }
 
     }
   });
@@ -242,6 +260,7 @@
       <div class="video_wrapper">
         <!-- svelte-ignore a11y-media-has-caption -->
         <video
+          bind:this={video}
           {src}
           type="video/mp4"
           bind:currentTime={video_time}
@@ -287,12 +306,47 @@
   
   {:else if used_filepath.includes("mp3")}
 
-  <div class="audio_wrapper">
-    <div 
-      bind:this="{waveformContainer}"
-      id="waveform"
-      wavesurfer
-    >
+    <div class="audio_wrapper">
+      <div 
+        bind:this="{waveformContainer}"
+        id="waveform"
+        wavesurfer
+      >
+      </div>
+      <audio
+        {src}
+        type="audio/mp3"
+        bind:currentTime={video_time}
+        bind:duration={video_duration}
+        bind:paused
+        bind:muted
+        bind:volume
+        on:timeupdate={handleVideoOnTimeUpdate}
+      />
+      <div> {format_duration(video_time)} / {format_duration(video_duration)} </div>
+      <div class="controls_bar">
+        <button class="box text_level1" on:click={handleOnPlayButton}
+          >{paused ? "Play" : "Pause"}</button
+        >
+        <input
+          type="range"
+          min="0"
+          max="100"
+          bind:value={video_seek_value}
+          class="slider"
+          on:input={handleOnSeekInteract}
+        />
+        <button class="box text_level1" on:click={handleOnMuteButtonClick}
+          >{muted ? "Unmute" : "Mute"}</button
+        >
+        <input
+          type="range"
+          min="0"
+          step="0.001"
+          max="1"
+          bind:value={volume}
+          class="slider"
+        />
     </div>
   </div>
 
