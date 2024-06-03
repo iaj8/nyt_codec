@@ -311,6 +311,7 @@
       >
       </div>
       <audio
+        bind:this={video}
         {src}
         type="audio/mp3"
         bind:currentTime={video_time}
