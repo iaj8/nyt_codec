@@ -167,6 +167,7 @@ When prompted, fill in the following environment variables:
 - GOOGLE_SERVICE_ACCOUNT_EMAIL: your google service account email address
 - GOOGLE_CLIENT_PRIVATE_KEY: your google service account private key
 - MAPBOX_ACCESS_TOKEN: your mapbox access token
+- CORRECT_PASSWORD: correct password to log into Codec instance
 
 [![Deploy to netlify button](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/SITU-Research/codec)
 

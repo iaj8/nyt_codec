@@ -47,6 +47,7 @@ export default {
 			GOOGLE_CLIENT_PRIVATE_KEY: JSON.stringify(process.env.GOOGLE_CLIENT_PRIVATE_KEY),
 			GOOGLE_SHEET_ID: JSON.stringify(process.env.GOOGLE_SHEET_ID),
 			MAPBOX_ACCESS_TOKEN: JSON.stringify(process.env.MAPBOX_ACCESS_TOKEN),
+			CORRECT_PASSWORD: JSON.stringify(process.env.CORRECT_PASSWORD),
 			preventAssignment: true
 		}),
 

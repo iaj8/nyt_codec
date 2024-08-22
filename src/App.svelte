@@ -4,6 +4,7 @@
   import LocalMediaInput from "./components/LocalMediaInput.svelte";
   import Topbar from "./components/topbar/Topbar.svelte";
   import Tooltip from "./components/Tooltip.svelte";
+  import PasswordPrompt from "./components/PasswordPrompt.svelte";
   import Modules from "./components/modules/Modules.svelte";
   import FilterPanel from "./components/modules/FilterPanel.svelte";
   import {
@@ -13,6 +14,10 @@
     filter_toggles,
     platform_config_store,
   } from "./stores/store";
+
+  let authenticated = false;
+  
+  authenticated = sessionStorage.getItem('authenticated') === 'true';
 
   const mouse_xy = { x: 0, y: 0 };
   const handleMouseMove = throttle((event) => {
@@ -242,25 +247,29 @@
     ? `var(--filtermenu-size)`
     : `0`} "
 >
-  {#await fetch_google_sheet_data()}
-    <div class="modal_container">
-      <div class="box modal_content text_level2">
-        fetching initial data from the spreadsheet...
+  {#if authenticated}
+    {#await fetch_google_sheet_data()}
+      <div class="modal_container">
+        <div class="box modal_content text_level2">
+          fetching initial data from the spreadsheet...
+        </div>
       </div>
-    </div>
-  {:then}
-    {#if $platform_config_store["Source of media files"] && $platform_config_store["Source of media files"].includes("local")}
-      <LocalMediaInput />
-    {/if}
-    <Topbar />
-    <Modules />
-  {:catch error}
-    <div class="modal_container">
-      <div class="box modal_content text_level2">
-        <p>something went wrong, see below for error</p>
-        <p>{error.message}</p>
-        <p>please reload the page</p>
+    {:then}
+      {#if $platform_config_store["Source of media files"] && $platform_config_store["Source of media files"].includes("local")}
+        <LocalMediaInput />
+      {/if}
+      <Topbar />
+      <Modules />
+    {:catch error}
+      <div class="modal_container">
+        <div class="box modal_content text_level2">
+          <p>something went wrong, see below for error</p>
+          <p>{error.message}</p>
+          <p>please reload the page</p>
+        </div>
       </div>
-    </div>
-  {/await}
+    {/await}
+  {:else}
+    <PasswordPrompt/>
+  {/if}
 </main>
