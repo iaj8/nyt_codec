@@ -10,6 +10,7 @@
   let error = '';
 
   function checkPassword() {
+    console.log("HERE 1");
     if (password === CORRECT_PASSWORD) {
       localStorage.setItem('authenticated', 'true');
       localStorage.setItem('CORRECT_PASSWORD', CORRECT_PASSWORD);
@@ -25,6 +26,7 @@
 
   // Check if already authenticated
   onMount(() => {
+    console.log("HERE 2");
     if (localStorage.getItem('authenticated') === 'true') {
       window.location.reload(); // Already authenticated, refresh to load the actual content
     }
