@@ -17,7 +17,7 @@
 
   let authenticated = false;
   
-  authenticated = sessionStorage.getItem('authenticated') === 'true';
+  authenticated = localStorage.getItem('authenticated') === 'true';
 
   const mouse_xy = { x: 0, y: 0 };
   const handleMouseMove = throttle((event) => {

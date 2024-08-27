@@ -11,7 +11,7 @@
 
   function checkPassword() {
     if (password === CORRECT_PASSWORD) {
-      sessionStorage.setItem('authenticated', 'true');
+      localStorage.setItem('authenticated', 'true');
       window.location.reload(); // Refresh to load the actual content
     } else {
       password = ""
@@ -24,7 +24,7 @@
 
   // Check if already authenticated
   onMount(() => {
-    if (sessionStorage.getItem('authenticated') === 'true') {
+    if (localStorage.getItem('authenticated') === 'true') {
       window.location.reload(); // Already authenticated, refresh to load the actual content
     }
   });
