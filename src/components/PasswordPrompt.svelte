@@ -12,6 +12,7 @@
   function checkPassword() {
     if (password === CORRECT_PASSWORD) {
       localStorage.setItem('authenticated', 'true');
+      localStorage.setItem('CORRECT_PASSWORD', CORRECT_PASSWORD);
       window.location.reload(); // Refresh to load the actual content
     } else {
       password = ""

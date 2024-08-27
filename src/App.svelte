@@ -16,6 +16,12 @@
   } from "./stores/store";
 
   let authenticated = false;
+
+  if (localStorage.getItem('authenticated') === 'true') {
+    if (localStorage.getItem('CORRECT_PASSWORD') !== CORRECT_PASSWORD) {
+      localStorage.setItem('authenticated', 'false');
+    }
+  }
   
   authenticated = localStorage.getItem('authenticated') === 'true';
 
