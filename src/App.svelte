@@ -20,6 +20,7 @@
   // reset the authentication if the password changes
   console.log(localStorage.getItem('CORRECT_PASSWORD'));
   console.log(CORRECT_PASSWORD);
+  console.log(localStorage.getItem('MAPBOX_ACCESS_TOKEN'));
   if (localStorage.getItem('CORRECT_PASSWORD') !== CORRECT_PASSWORD) {
     localStorage.setItem('authenticated', 'false');
   }
